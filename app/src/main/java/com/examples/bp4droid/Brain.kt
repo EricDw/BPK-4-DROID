@@ -18,6 +18,7 @@ interface ABrain {
     val neurotransmitter: ReceiveChannel<Neuron<*>>
     val newBehavior: ReceiveChannel<NameToBThreadMain>
     val coroutineScope: CoroutineScope
+    fun learnNewSkill(newSkill: Set<NameToBThreadMain>)
 }
 
 @ExperimentalCoroutinesApi
@@ -57,6 +58,16 @@ class Brain(
         learningJob.cancel()
     }
 
+    override fun learnNewSkill(newSkill: Set<NameToBThreadMain>) {
+
+        val behavior = "Add new skill" toBThread {
+            this.coroutineScope = this@Brain.coroutineScope
+            addBThreads(newSkill)
+        }
+
+        startNewBThread(behavior, coroutineScope)
+
+    }
 }
 
 private class HelloEvent : Event()
