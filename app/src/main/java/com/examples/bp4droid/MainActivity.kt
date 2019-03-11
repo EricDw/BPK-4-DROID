@@ -8,9 +8,13 @@ import com.examples.bprogram.NameToBThreadMain
 import com.examples.bprogram.toBThread
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
 import org.scenariotools.bpk.Event
+import org.scenariotools.bpk.doWhile
 import kotlin.examples.bp4droid.R
 
 @ExperimentalCoroutinesApi
@@ -40,27 +44,36 @@ class MainActivity : AppCompatActivity() {
             }
             request(blargBlarg)
         }
-        var interceptions = 0
         val waitForBlargBlarg = "Wait For Blarg Blarg" toBThread {
-            waitFor(blargBlarg).run {
-                GlobalScope.launch(Dispatchers.Main) {
-                    delay((1 + interceptions * 1000).toLong())
-                    interceptions++
-                    val message = "Blarg Blarg intercepted $interceptions times"
-                    messages.text = message
+            priority = 1
+            doWhile(true) {
+                waitFor(blargBlarg).run {
+                    GlobalScope.launch(Dispatchers.Main) {
+                        val message = "I am thread 1 and my priority is $priority "
+                        messages.text = message
+                    }
                 }
             }
         }
+        val waitForBlargBlarg2 = "Wait For Blarg Blarg 2" toBThread {
+            priority = 2
+            doWhile(true) {
+                waitFor(blargBlarg).run {
+                    GlobalScope.launch(Dispatchers.Main) {
+                        val message = "I am thread 2 and my priority is $priority "
+                        messages.text = message
+                    }
+                }
+            }
+        }
+
+        brain.learnNewSkill(setOf(waitForBlargBlarg, waitForBlargBlarg2))
 
         fab.setOnClickListener {
             GlobalScope.launch(Dispatchers.Main) {
                 newBehaviors.send(
                     sayBlargBlarg
                 )
-                newBehaviors.send(
-                    waitForBlargBlarg
-                )
-                brain.learnNewSkill(setOf(sayBlargBlarg, waitForBlargBlarg))
             }
         }
 
