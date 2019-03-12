@@ -23,24 +23,24 @@ open class BThread @ExperimentalCoroutinesApi constructor(
 ) : Comparable<BThread> {
 
     /**
-     * Threads are executed from lowest to highest
+     * Threads are executed from highest to lowest
      * priority number.
      *
-     * i.e. 1 is executed before 2
+     * i.e. 2 is executed before 1
      *
-     * Priority can only be set between the range of 0..10
+     * Priority can only be set between the range of 1..10
      * Anything outside that range will be set to the
      * closest value within the range.
      *
      * i.e. 100 is reassigned to 10 and -100 is reassigned to 0
      *
-     * By default priority is set to 10
+     * By default priority is set to 1
      */
-    var priority: Int = 10
+    var priority: Int = 1
         set(value) {
             field = when {
                 value > 10 -> 10
-                value < 0 -> 0
+                value < 0 -> 1
                 else -> value
             }
         }

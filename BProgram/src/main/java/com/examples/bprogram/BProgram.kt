@@ -15,7 +15,7 @@ fun bThread(name: String, bThreadMain: suspend BThread.() -> Unit) =
     NameToBThreadMain(name, bThreadMain)
 
 infix fun String.toBThread(bThreadMain: suspend BThread.() -> Unit) =
-    NameToBThreadMain(this, bThreadMain)
+    bThread(this, bThreadMain)
 
 open class AbstractBSyncMessage
 data class TerminatingBThreadMessage(val sender: BThread) : AbstractBSyncMessage()
@@ -161,16 +161,16 @@ open class BProgram(
                         abstractBSyncMessage.blockedEvents
                     decrementBusyBThreads()
                 }
-                is TerminatingBThreadMessage -> {
+                is TerminatingBThreadMessage ->
                     if (suspendedBThreadsToBlockedEvents.containsKey(abstractBSyncMessage.sender))
                         suspendedBThreadsToBlockedEvents.remove(abstractBSyncMessage.sender)
                     else {
                         activeBThreadsToLastBSyncMessage.remove(abstractBSyncMessage.sender)
                         decrementBusyBThreads()
                     }
-                }
+
                 is AddBThreadsMessage -> {
-                    for (bt in abstractBSyncMessage.bThreadsToBeAdded) {
+                    abstractBSyncMessage.bThreadsToBeAdded.forEach { bt ->
                         startNewBThread(bt, mainCoroutineScope)
                     }
                 }
@@ -196,7 +196,7 @@ open class BProgram(
             if (be == NOEVENTS || be is MutableNonConcreteEventSet && be.size == 1 && be.iterator().next() == NOEVENTS) continue
 
             allBlockedEventSets.add(be)
-            //println("${c++}======= BLOCKED: ${bThreadToEventsMapEntry.value.blockedEvents} BY ${bThreadToEventsMapEntry.key.name} $numberOfBUSYBThreads ${activeBThreadsToLastBSyncMessage.size}")
+//            println("${c++}======= BLOCKED: ${bThreadToEventsMapEntry.value.blockedEvents} BY ${bThreadToEventsMapEntry.key.name} $numberOfBUSYBThreads ${activeBThreadsToLastBSyncMessage.size}")
         }
 
         for (suspendedBThreadsToBlockedEventsEntry in suspendedBThreadsToBlockedEvents) {
@@ -220,34 +220,18 @@ open class BProgram(
         return allSelectableEvents
     }
 
-    private suspend fun notifyActiveBThreads(selectedEvent: Event) {
-
-//        val bThreadToEventsMapEntryIterator = activeBThreadsToLastBSyncMessage.iterator()
-        val bThreadToEventsMapEntryIterator =
-            activeBThreadsToLastBSyncMessage.toSortedMap(
-                Comparator { b1, b2 ->
-                    b1.compareTo(b2)
-                }
-            ).iterator()
-
-        while (bThreadToEventsMapEntryIterator.hasNext()) {
-            val bThreadToEventsMapEntry = bThreadToEventsMapEntryIterator.next()
-            val value = bThreadToEventsMapEntry.value
-            if (value.waitedForEvents.contains(selectedEvent) || value.requestedEvents.contains(
-                    selectedEvent
-                )
-            ) {
-                bThreadToEventsMapEntry.key.notifyOfEventChannel.send(selectedEvent)
-                activeBThreadsToLastBSyncMessage.remove(bThreadToEventsMapEntry.key)
-                bThreadToEventsMapEntryIterator.remove()
-                incrementBusyBThreads()
+    private suspend fun notifyActiveBThreads(selectedEvent: Event) =
+        activeBThreadsToLastBSyncMessage.filter {
+            it.value.run {
+                waitedForEvents.contains(selectedEvent) || requestedEvents.contains(selectedEvent)
             }
+        }.map { it.key }.sortedBy { it.priority }.forEach {
+            it.notifyOfEventChannel.send(selectedEvent)
+            activeBThreadsToLastBSyncMessage.remove(it)
+            incrementBusyBThreads()
         }
-
-    }
 
     private fun incrementBusyBThreads() {
         numberOfBUSYBThreads++
     }
-
 }

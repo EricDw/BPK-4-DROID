@@ -45,7 +45,6 @@ class MainActivity : AppCompatActivity() {
             request(blargBlarg)
         }
         val waitForBlargBlarg = "Wait For Blarg Blarg" toBThread {
-            priority = 1
             doWhile(true) {
                 waitFor(blargBlarg).run {
                     GlobalScope.launch(Dispatchers.Main) {
@@ -55,12 +54,14 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
         val waitForBlargBlarg2 = "Wait For Blarg Blarg 2" toBThread {
             priority = 2
             doWhile(true) {
                 waitFor(blargBlarg).run {
                     GlobalScope.launch(Dispatchers.Main) {
-                        val message = "I am thread 2 and my priority is $priority "
+                        val message = """${messages.text}
+                            |I am thread 2 and my priority is $priority """.trimMargin()
                         messages.text = message
                     }
                 }
