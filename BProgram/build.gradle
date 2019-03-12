@@ -5,13 +5,12 @@ repositories {
     mavenCentral()
 }
 dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     testImplementation "org.jetbrains.kotlin:kotlin-test:$kotlin_version"
     // Workaround to make addSuppressed work in tests
     testImplementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     testImplementation "org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version"
-
     implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.1.1'

@@ -42,6 +42,7 @@ class MainNeuroCircuit(
 
     private fun generateImpulseFor(event: Event) =
         "Requesting $event" toBThread {
+            coroutineScope = defaultScope
             priority = 2
             Log.d(
                 MainNeuroCircuit::class.simpleName,
@@ -51,12 +52,11 @@ class MainNeuroCircuit(
         }
 
     private fun mainStateReducer(): NameToBThreadMain = "MainState Reducer" toBThread {
+        coroutineScope = defaultScope
         var mainState = MainState()
         doWhile(true) {
-            Log.d("VModel", "running in scope ${coroutineScope.coroutineContext}")
             waitFor(FABClicked).run {
                 coroutineScope.launch(Dispatchers.Main) {
-                    Log.d("VModel", "running in scope ${coroutineContext}")
                     mainState = mainState.copy(
                         showHello = !mainState.showHello
                     )
