@@ -4,83 +4,44 @@ import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
-import com.examples.bprogram.NameToBThreadMain
-import com.examples.bprogram.toBThread
+import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProviders
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
-import org.scenariotools.bpk.Event
-import org.scenariotools.bpk.doWhile
+import kotlin.coroutines.CoroutineContext
 import kotlin.examples.bp4droid.R
 
 @ExperimentalCoroutinesApi
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
+
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main
+
+    private val neuroCircuit: NeuroCircuit<MainState> by lazy {
+        ViewModelProviders.of(
+            this@MainActivity,
+            NeuroPathfinder()
+        ).get(
+            MainNeuroCircuit::class.java
+        )
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        val newBehaviors: Channel<NameToBThreadMain> = Channel(Channel.UNLIMITED)
-
-        val brain: ABrain = Brain(
-            newBehavior = newBehaviors
-        ).apply {
-            runUntilTerminate()
-        }
-
-        val blargBlarg = object : Event() {}
-
-        var clicks = 0
-        val sayBlargBlarg = "Say Blarg  Blarg" toBThread {
-            GlobalScope.launch(Dispatchers.Main) {
-                clicks++
-                val message = "Blarg Blarg $clicks"
-                messages.text = message
-            }
-            request(blargBlarg)
-        }
-        val waitForBlargBlarg = "Wait For Blarg Blarg" toBThread {
-            doWhile(true) {
-                waitFor(blargBlarg).run {
-                    GlobalScope.launch(Dispatchers.Main) {
-                        val message = "I am thread 1 and my priority is $priority "
-                        messages.text = message
-                    }
-                }
-            }
-        }
-
-        val waitForBlargBlarg2 = "Wait For Blarg Blarg 2" toBThread {
-            priority = 2
-            doWhile(true) {
-                waitFor(blargBlarg).run {
-                    GlobalScope.launch(Dispatchers.Main) {
-                        val message = """${messages.text}
-                            |I am thread 2 and my priority is $priority """.trimMargin()
-                        messages.text = message
-                    }
-                }
-            }
-        }
-
-        brain.learnNewSkill(setOf(waitForBlargBlarg, waitForBlargBlarg2))
+        neuroCircuit.state.observe(this, Observer(this::render))
 
         fab.setOnClickListener {
-            GlobalScope.launch(Dispatchers.Main) {
-                newBehaviors.send(
-                    sayBlargBlarg
+            launch {
+                neuroCircuit.transmitImpulse(
+                    FABClicked
                 )
-            }
-        }
-
-        GlobalScope.launch(Dispatchers.Main) {
-            for (neuron in brain.neurotransmitter) {
-                messages.text = neuron.data.toString()
             }
         }
 
@@ -99,6 +60,14 @@ class MainActivity : AppCompatActivity() {
         return when (item.itemId) {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+    private fun render(state: MainState?) {
+        state?.run {
+            if (showHello)
+                messages.text = "Hello"
+            else messages.text = ""
         }
     }
 }

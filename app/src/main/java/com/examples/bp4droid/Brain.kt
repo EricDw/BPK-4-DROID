@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import org.scenariotools.bpk.Event
 import kotlin.coroutines.CoroutineContext
@@ -16,14 +17,13 @@ data class Neuron<T>(val data: T)
 
 interface ABrain {
     val neurotransmitter: ReceiveChannel<Neuron<*>>
-    val newBehavior: ReceiveChannel<NameToBThreadMain>
+    val newBehavior: SendChannel<NameToBThreadMain>
     val coroutineScope: CoroutineScope
     fun learnNewSkill(newSkill: Set<NameToBThreadMain>)
 }
 
 @ExperimentalCoroutinesApi
 class Brain(
-    override val newBehavior: ReceiveChannel<NameToBThreadMain> = Channel(Channel.UNLIMITED),
     override val coroutineScope: CoroutineScope = object : CoroutineScope {
         override val coroutineContext: CoroutineContext
             get() = Dispatchers.Default
@@ -33,8 +33,17 @@ class Brain(
     coroutineScope = coroutineScope
 ), ABrain {
 
-    private val internalTransmitter = Channel<Neuron<*>>(Channel.UNLIMITED)
-    override val neurotransmitter: ReceiveChannel<Neuron<*>> = internalTransmitter
+    private val _newBehavior: Channel<NameToBThreadMain> =
+        Channel(Channel.UNLIMITED)
+
+    override val newBehavior: SendChannel<NameToBThreadMain>
+        get() = _newBehavior
+
+    private val _neurotransmitter: Channel<Neuron<*>> =
+        Channel(Channel.UNLIMITED)
+
+    override val neurotransmitter: ReceiveChannel<Neuron<*>> =
+        _neurotransmitter
 
     override fun eventSelected(selectedEvent: Event) {
         when (selectedEvent) {
@@ -44,12 +53,12 @@ class Brain(
 
     private fun <T> transmitNeuron(data: T) {
         coroutineScope.launch {
-            internalTransmitter.send(Neuron(data))
+            _neurotransmitter.send(Neuron(data))
         }
     }
 
     private val learningJob = coroutineScope.launch {
-        for (behavior in newBehavior) {
+        for (behavior in _newBehavior) {
             startNewBThread(behavior, coroutineScope)
         }
     }

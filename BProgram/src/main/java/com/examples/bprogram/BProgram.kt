@@ -226,6 +226,7 @@ open class BProgram(
                 waitedForEvents.contains(selectedEvent) || requestedEvents.contains(selectedEvent)
             }
         }.map { it.key }.sortedBy { it.priority }.forEach {
+            println("BT ${it.priority}")
             it.notifyOfEventChannel.send(selectedEvent)
             activeBThreadsToLastBSyncMessage.remove(it)
             incrementBusyBThreads()
