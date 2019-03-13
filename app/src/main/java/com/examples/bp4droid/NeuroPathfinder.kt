@@ -10,7 +10,8 @@ class NeuroPathfinder : ViewModelProvider.Factory {
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         return when {
             modelClass.isAssignableFrom(MainNeuroCircuit::class.java) ->
-                MainNeuroCircuit(BrainApplication.brain) as T
+//                MainNeuroCircuit(BrainApplication.brain) as T
+                TODO()
             else -> throw IllegalArgumentException("ViewModel not found")
         }
     }

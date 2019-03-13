@@ -1,73 +1,32 @@
 package com.examples.bp4droid
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import com.examples.bprogram.NameToBThreadMain
-import com.examples.bprogram.toBThread
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
-import org.scenariotools.bpk.Event
-import org.scenariotools.bpk.doWhile
-import kotlin.coroutines.CoroutineContext
 
 @ExperimentalCoroutinesApi
 class MainNeuroCircuit(
-    private val brain: ABrain,
-    private val defaultScope: CoroutineScope = object : CoroutineScope {
-        override val coroutineContext: CoroutineContext
-            get() = Dispatchers.Default
-    }
+    workerScope: CoroutineScope,
+    private val mainScope: CoroutineScope,
+    behaviorModule: BehaviorModule<MainState>
 ) : ViewModel(), NeuroCircuit<MainState> {
-
-    private val _state = MutableLiveData<MainState>()
-
+    private val _state: MutableLiveData<MainState> = MutableLiveData()
     override val state: LiveData<MainState>
         get() = _state
 
-    init {
-        brain.learnNewSkill(mainBehaviours())
-    }
-
-    override fun transmitImpulse(impulse: Event) {
-        defaultScope.launch {
-            brain.newBehavior.send(
-                generateImpulseFor(impulse)
-            )
-        }
-    }
-
-    private fun generateImpulseFor(event: Event) =
-        "Requesting $event" toBThread {
-            coroutineScope = defaultScope
-            priority = 2
-            Log.d(
-                MainNeuroCircuit::class.simpleName,
-                "Requesting $event"
-            )
-            request(event)
-        }
-
-    private fun mainStateReducer(): NameToBThreadMain = "MainState Reducer" toBThread {
-        coroutineScope = defaultScope
-        var mainState = MainState()
-        doWhile(true) {
-            waitFor(FABClicked).run {
-                coroutineScope.launch(Dispatchers.Main) {
-                    mainState = mainState.copy(
-                        showHello = !mainState.showHello
-                    )
-                    _state.value = mainState
-                }
+    private val stateJob = workerScope.launch {
+        for (state in behaviorModule.stateData) {
+            mainScope.launch {
+                _state.value = state
             }
         }
     }
 
-    private fun mainBehaviours(): Set<NameToBThreadMain> = setOf(
-        mainStateReducer()
-    )
-
+    override fun onCleared() {
+        stateJob.cancel()
+        super.onCleared()
+    }
 }

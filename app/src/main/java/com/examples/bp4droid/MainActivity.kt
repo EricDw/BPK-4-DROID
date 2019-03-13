@@ -39,9 +39,9 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         fab.setOnClickListener {
             launch {
-                neuroCircuit.transmitImpulse(
-                    FABClicked
-                )
+                //                neuroCircuit.transmitImpulse(
+//                    FABClicked
+//                )
             }
         }
 

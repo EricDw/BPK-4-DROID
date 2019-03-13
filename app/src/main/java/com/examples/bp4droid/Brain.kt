@@ -20,6 +20,7 @@ interface ABrain {
     val newBehavior: SendChannel<NameToBThreadMain>
     val coroutineScope: CoroutineScope
     fun learnNewSkill(newSkill: Set<NameToBThreadMain>)
+    fun terminateExecution()
 }
 
 @ExperimentalCoroutinesApi
@@ -27,9 +28,9 @@ class Brain(
     override val coroutineScope: CoroutineScope = object : CoroutineScope {
         override val coroutineContext: CoroutineContext
             get() = Dispatchers.Default
-    }
+    }, initialBehaviors: Array<NameToBThreadMain> = emptyArray()
 ) : BProgram(
-    sayHello(),
+    loopUntilTerminate, *initialBehaviors,
     coroutineScope = coroutineScope
 ), ABrain {
 
@@ -44,12 +45,6 @@ class Brain(
 
     override val neurotransmitter: ReceiveChannel<Neuron<*>> =
         _neurotransmitter
-
-    override fun eventSelected(selectedEvent: Event) {
-        when (selectedEvent) {
-            is HelloEvent -> transmitNeuron("Hello")
-        }
-    }
 
     private fun <T> transmitNeuron(data: T) {
         coroutineScope.launch {
@@ -77,18 +72,24 @@ class Brain(
         startNewBThread(behavior, coroutineScope)
 
     }
+
+    override fun terminateExecution() {
+        startNewBThread(sendEvent(terminationEvent), coroutineScope)
+    }
 }
 
-private class HelloEvent : Event()
-
-private val defaultScope = object : CoroutineScope {
-    override val coroutineContext: CoroutineContext
-        get() = Dispatchers.Default
+private val terminationEvent = object : Event() {}
+private val loopUntilTerminate = "Loop until termination" toBThread {
+    var shouldLoop = true
+    while (shouldLoop) {
+        waitFor(terminationEvent).run {
+            shouldLoop = false
+            terminate()
+        }
+    }
 }
 
-private fun sayHello(
-    coroutineScope: CoroutineScope = defaultScope
-): NameToBThreadMain = "Say Hello" toBThread {
-    this.coroutineScope = coroutineScope
-    request(HelloEvent())
-}
+private fun sendEvent(event: Event) = "Send event" toBThread
+        {
+            request(event)
+        }
