@@ -1,1 +1,1 @@
-include ':app', ':BProgram'
+include ':app', ':BProgram', ':linak', ':NN4K'
